@@ -5,7 +5,11 @@ import {
   Post,
   Request,
   UseGuards,
+  Res,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -21,8 +25,23 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.login(loginDto, res);
+  }
+
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request & { cookies: Record<string, string> },
+  ): Promise<{ access_token: string }> {
+    const refreshToken = req.cookies?.['refresh_token'];
+    if (!refreshToken) {
+      throw new UnauthorizedException('未提供 refresh token');
+    }
+
+    return this.authService.refresh(refreshToken);
   }
 
   @Get('me')
