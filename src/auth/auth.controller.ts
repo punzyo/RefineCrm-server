@@ -44,6 +44,19 @@ export class AuthController {
     return this.authService.refresh(refreshToken);
   }
 
+  @Post('logout')
+  logout(
+    @Req() req: Request & { cookies: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ): { message: string } {
+    const refreshToken = req.cookies?.['refresh_token'];
+    if (!refreshToken) {
+      return { message: '已登出' };
+    }
+
+    return this.authService.logout(refreshToken, res);
+  }
+
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   getMe(@Request() req) {

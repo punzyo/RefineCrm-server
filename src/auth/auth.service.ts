@@ -46,6 +46,18 @@ export class AuthService {
     return { access_token: accessToken };
   }
 
+  logout(refreshToken: string, res: Response): { message: string } {
+    this.refreshTokens.delete(refreshToken);
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
+
+    return { message: '已登出' };
+  }
+
   async register(registerDto: RegisterDto) {
     const existing = this.users.find((u) => u.email === registerDto.email);
     if (existing) {
