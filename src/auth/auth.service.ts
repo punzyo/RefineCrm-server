@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -29,5 +30,22 @@ export class AuthService {
     const token = this.jwtService.sign(payload);
 
     return { access_token: token };
+  }
+
+  async register(registerDto: RegisterDto) {
+    const existing = this.users.find((u) => u.email === registerDto.email);
+    if (existing) {
+      throw new Error('Email 已被註冊');
+    }
+
+    const hashed = await bcrypt.hash(registerDto.password, 10);
+    const newUser = {
+      id: (this.users.length + 1).toString(),
+      email: registerDto.email,
+      password: hashed,
+    };
+
+    this.users.push(newUser);
+    return { message: '註冊成功' };
   }
 }
