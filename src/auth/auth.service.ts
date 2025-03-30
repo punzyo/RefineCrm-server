@@ -29,17 +29,27 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     const refreshToken = uuidv4();
+    const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+        expiredAt: { lt: new Date() },
+      },
+    });
+
     await this.prisma.refreshToken.create({
       data: {
         token: refreshToken,
         userId: user.id,
+        expiredAt: refreshExpiresAt,
       },
     });
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000,
     });
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -65,21 +75,34 @@ export class AuthService {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
+    await this.prisma.refreshToken.delete({
+      where: { token: refreshToken },
+    });
+
     return { message: '已登出' };
   }
 
   async refresh(refreshToken: string): Promise<{ access_token: string }> {
-    const found = await this.prisma.refreshToken.findUnique({
+    const token = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: { user: true },
     });
 
-    if (!found || !found.user) {
-      throw new UnauthorizedException('無效的 refresh token');
+    if (!token || token.expiredAt < new Date()) {
+      throw new UnauthorizedException('Refresh token 無效或已過期');
     }
 
-    const payload = { sub: found.user.id, email: found.user.email };
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        userId: token.user.id,
+        expiredAt: { lt: new Date() },
+      },
+    });
+
+    const { id, email } = token.user;
+    const payload = { sub: id, email };
     const accessToken = this.jwtService.sign(payload);
+
     return { access_token: accessToken };
   }
 }
