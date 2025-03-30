@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { RegisterDto } from './dto/register.dto';
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from 'src/prisma.service';
@@ -45,24 +44,6 @@ export class AuthService {
     });
 
     return { access_token: accessToken };
-  }
-
-  async register(registerDto: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: registerDto.email },
-    });
-    if (existing) {
-      throw new Error('Email 已被註冊');
-    }
-
-    const hashed = await bcrypt.hash(registerDto.password, 10);
-    await this.prisma.user.create({
-      data: {
-        email: registerDto.email,
-        password: hashed,
-      },
-    });
-    return { message: '註冊成功' };
   }
 
   async logout(
