@@ -5,23 +5,19 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
-
-  private users = [
-    {
-      id: '1',
-      email: 'test@example.com',
-      password: '$2b$10$uosB0dWxqp5uyaBAEue.2e1fiw4iq5gq6Aiz823ff6mMmwAn2/gve',
-    },
-  ];
-
-  private refreshTokens = new Map<string, string>();
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   async login(loginDto: LoginDto, res: Response) {
-    const user = this.users.find((u) => u.email === loginDto.email);
+    const user = await this.prisma.user.findUnique({
+      where: { email: loginDto.email },
+    });
     if (!user) throw new UnauthorizedException('帳號或密碼錯誤');
 
     const isMatch: boolean = await bcrypt.compare(
@@ -34,7 +30,12 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     const refreshToken = uuidv4();
-    this.refreshTokens.set(refreshToken, user.id);
+    await this.prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+      },
+    });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -46,8 +47,31 @@ export class AuthService {
     return { access_token: accessToken };
   }
 
-  logout(refreshToken: string, res: Response): { message: string } {
-    this.refreshTokens.delete(refreshToken);
+  async register(registerDto: RegisterDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: registerDto.email },
+    });
+    if (existing) {
+      throw new Error('Email 已被註冊');
+    }
+
+    const hashed = await bcrypt.hash(registerDto.password, 10);
+    await this.prisma.user.create({
+      data: {
+        email: registerDto.email,
+        password: hashed,
+      },
+    });
+    return { message: '註冊成功' };
+  }
+
+  async logout(
+    refreshToken: string,
+    res: Response,
+  ): Promise<{ message: string }> {
+    await this.prisma.refreshToken.deleteMany({
+      where: { token: refreshToken },
+    });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
@@ -58,31 +82,17 @@ export class AuthService {
     return { message: '已登出' };
   }
 
-  async register(registerDto: RegisterDto) {
-    const existing = this.users.find((u) => u.email === registerDto.email);
-    if (existing) {
-      throw new Error('Email 已被註冊');
+  async refresh(refreshToken: string): Promise<{ access_token: string }> {
+    const found = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!found || !found.user) {
+      throw new UnauthorizedException('無效的 refresh token');
     }
 
-    const hashed = await bcrypt.hash(registerDto.password, 10);
-    const newUser = {
-      id: (this.users.length + 1).toString(),
-      email: registerDto.email,
-      password: hashed,
-    };
-
-    this.users.push(newUser);
-    return { message: '註冊成功' };
-  }
-
-  async refresh(refreshToken: string) {
-    const userId = this.refreshTokens.get(refreshToken);
-    if (!userId) throw new UnauthorizedException('無效的 refresh token');
-
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) throw new UnauthorizedException('使用者不存在');
-
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: found.user.id, email: found.user.email };
     const accessToken = this.jwtService.sign(payload);
     return { access_token: accessToken };
   }

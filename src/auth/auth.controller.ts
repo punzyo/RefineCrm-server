@@ -1,16 +1,12 @@
 import {
   Body,
   Controller,
-  Get,
   Post,
-  Request,
-  UseGuards,
-  Res,
   Req,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -45,21 +41,15 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(
+  async logout(
     @Req() req: Request & { cookies: Record<string, string> },
     @Res({ passthrough: true }) res: Response,
-  ): { message: string } {
+  ): Promise<{ message: string }> {
     const refreshToken = req.cookies?.['refresh_token'];
     if (!refreshToken) {
       return { message: '已登出' };
     }
 
     return this.authService.logout(refreshToken, res);
-  }
-
-  @Get('me')
-  @UseGuards(AuthGuard('jwt'))
-  getMe(@Request() req) {
-    return req.user;
   }
 }
