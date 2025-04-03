@@ -96,14 +96,16 @@ export class AuthService {
       where: { token: refreshToken },
     });
 
-    res.clearCookie('refresh_token', {
+    res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
-    await this.prisma.refreshToken.delete({
-      where: { token: refreshToken },
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
     return { message: '已登出' };
