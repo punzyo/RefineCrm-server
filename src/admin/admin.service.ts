@@ -22,4 +22,29 @@ export class AdminService {
     });
     return { message: '註冊成功' };
   }
+
+  async findAll() {
+    return this.prisma.user.findMany({
+      where: {
+        roles: {
+          some: {
+            role: {
+              permissions: {
+                some: {
+                  permission: {
+                    name: { startsWith: 'admin:' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+  }
 }
