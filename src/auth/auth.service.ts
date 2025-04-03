@@ -51,6 +51,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
+      name: user.name,
       permissions: Array.from(new Set(allPermissions)),
     };
     const accessToken = this.jwtService.sign(payload);
@@ -88,6 +89,7 @@ export class AuthService {
     return {
       userId: user.id,
       email: user.email,
+      name: user.name,
       permissions: Array.from(new Set(allPermissions)),
     };
   }
@@ -149,6 +151,7 @@ export class AuthService {
     const payload = {
       sub: token.user.id,
       email: token.user.email,
+      name: token.user.name,
       permissions: Array.from(new Set(allPermissions)),
     };
 
