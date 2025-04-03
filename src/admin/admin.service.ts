@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from '../prisma.service';
 import { RegisterAdminDto } from './dto/register-admin.dto';
-
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 @Injectable()
 export class AdminService {
   constructor(private prisma: PrismaService) {}
@@ -47,5 +47,18 @@ export class AdminService {
         createdAt: true,
       },
     });
+  }
+
+  async updateUserRoles(dto: UpdateUserRoleDto) {
+    const { userId, roleIds } = dto;
+
+    await this.prisma.userRole.deleteMany({
+      where: { userId },
+    });
+
+    const data = roleIds.map((roleId) => ({ userId, roleId }));
+    await this.prisma.userRole.createMany({ data });
+
+    return { message: '權限已更新' };
   }
 }
