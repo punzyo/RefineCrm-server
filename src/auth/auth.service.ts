@@ -76,13 +76,13 @@ export class AuthService {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 15 * 60 * 1000,
     });
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 15 * 60 * 1000,
     });
 
     return {
@@ -115,7 +115,10 @@ export class AuthService {
     return { message: '已登出' };
   }
 
-  async refresh(refreshToken: string): Promise<{ access_token: string }> {
+  async refresh(
+    refreshToken: string,
+    res: Response,
+  ): Promise<{ message: string }> {
     const token = (await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: {
@@ -150,6 +153,13 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
-    return { access_token: accessToken };
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return { message: 'access token refreshed' };
   }
 }

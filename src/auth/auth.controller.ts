@@ -25,13 +25,14 @@ export class AuthController {
   @Post('refresh')
   async refresh(
     @Req() req: Request & { cookies: Record<string, string> },
-  ): Promise<{ access_token: string }> {
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
     const refreshToken = req.cookies?.['refresh_token'];
     if (!refreshToken) {
       throw new UnauthorizedException('未提供 refresh token');
     }
 
-    return this.authService.refresh(refreshToken);
+    return this.authService.refresh(refreshToken, res);
   }
 
   @Post('logout')
