@@ -86,7 +86,6 @@ export class AuthService {
     });
 
     return {
-      access_token: accessToken,
       userId: user.id,
       email: user.email,
       permissions: Array.from(new Set(allPermissions)),
