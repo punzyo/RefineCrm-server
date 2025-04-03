@@ -85,7 +85,12 @@ export class AuthService {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return { access_token: accessToken };
+    return {
+      access_token: accessToken,
+      userId: user.id,
+      email: user.email,
+      permissions: Array.from(new Set(allPermissions)),
+    };
   }
 
   async logout(
