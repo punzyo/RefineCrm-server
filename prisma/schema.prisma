@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String         @id @default(uuid())
-  email     String         @unique
-  password  String
-  name      String
-  createdAt DateTime       @default(now())
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
-  roles     UserRole[]
+  roles         UserRole[]
 }
 
 model RefreshToken {
@@ -24,21 +25,21 @@ model RefreshToken {
   createdAt DateTime @default(now())
   expiredAt DateTime
 }
-model Role {
-  id          String          @id @default(uuid())
-  name        String          @unique
-  createdAt   DateTime        @default(now())
 
+model Role {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
   users       UserRole[]
   permissions RolePermission[]
 }
 
 model Permission {
-  id        String            @id @default(uuid())
-  name      String            @unique
-  createdAt DateTime         @default(now())
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
 
-  roles     RolePermission[]
+  roles RolePermission[]
 }
 
 model UserRole {
