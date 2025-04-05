@@ -4,12 +4,14 @@ import {
   Get,
   Patch,
   Post,
+  Query,
   Request,
+  Res,
   SetMetadata,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Request as ExpressRequest } from 'express';
+import { Request as ExpressRequest, Response } from 'express';
 import { Permission } from 'src/permission/permissions.enum';
 import { PermissionsGuard } from 'src/permission/permissions.guard';
 import { AdminService } from './admin.service';
@@ -36,8 +38,11 @@ export class AdminController {
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @SetMetadata('permissions', [Permission.AdminRead])
-  findAll() {
-    return this.adminService.findAll();
+  findAll(
+    @Query() query: Record<string, string>,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.adminService.findAll(query, res);
   }
 
   @Patch('roles')
