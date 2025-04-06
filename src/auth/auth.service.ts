@@ -31,20 +31,15 @@ const userWithPermissionsInclude = {
     },
   },
 };
+const oneDay = 24 * 60 * 60 * 1000;
+const oneWeek = 7 * oneDay;
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
   ) {}
-
-  async login(loginDto: LoginDto, res: Response) {
-    const user = (await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
-      include: userWithPermissionsInclude,
-    })) as UserWithRoles;
-    if (!user) throw new UnauthorizedException('帳號或密碼錯誤');
-
+  private async issueTokens(user: UserWithRoles, res: Response) {
     const allPermissions = user.roles.flatMap((userRole) =>
       userRole.role.permissions.map((rp) => rp.permission.name),
     );
@@ -54,10 +49,10 @@ export class AuthService {
       name: user.name,
       permissions: Array.from(new Set(allPermissions)),
     };
-    const accessToken = this.jwtService.sign(payload);
 
+    const accessToken = this.jwtService.sign(payload);
     const refreshToken = uuidv4();
-    const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const refreshExpiresAt = new Date(Date.now() + oneWeek);
 
     await this.prisma.refreshToken.deleteMany({
       where: {
@@ -73,24 +68,39 @@ export class AuthService {
         expiredAt: refreshExpiresAt,
       },
     });
+
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: oneDay,
     });
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 15 * 60 * 1000,
+      maxAge: oneWeek,
     });
+
+    return payload;
+  }
+  async login(loginDto: LoginDto, res: Response) {
+    const user = (await this.prisma.user.findUnique({
+      where: { email: loginDto.email },
+      include: userWithPermissionsInclude,
+    })) as UserWithRoles;
+
+    if (!user) {
+      throw new UnauthorizedException('帳號或密碼錯誤');
+    }
+
+    const payload = await this.issueTokens(user, res);
 
     return {
       userId: user.id,
       email: user.email,
       name: user.name,
-      permissions: Array.from(new Set(allPermissions)),
+      permissions: payload.permissions,
     };
   }
 
@@ -121,48 +131,20 @@ export class AuthService {
     refreshToken: string,
     res: Response,
   ): Promise<{ message: string }> {
-    const token = (await this.prisma.refreshToken.findUnique({
+    const tokenRecord = (await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: {
         user: {
           include: userWithPermissionsInclude,
         },
       },
-    })) as {
-      user: UserWithRoles;
-      expiredAt: Date;
-    } | null;
+    })) as { user: UserWithRoles; expiredAt: Date } | null;
 
-    if (!token || token.expiredAt < new Date()) {
+    if (!tokenRecord || tokenRecord.expiredAt < new Date()) {
       throw new UnauthorizedException('Refresh token 無效或已過期');
     }
 
-    await this.prisma.refreshToken.deleteMany({
-      where: {
-        userId: token.user.id,
-        expiredAt: { lt: new Date() },
-      },
-    });
-
-    const allPermissions = token.user.roles.flatMap((userRole) =>
-      userRole.role.permissions.map((rp) => rp.permission.name),
-    );
-
-    const payload = {
-      sub: token.user.id,
-      email: token.user.email,
-      name: token.user.name,
-      permissions: Array.from(new Set(allPermissions)),
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000,
-    });
-
+    await this.issueTokens(tokenRecord.user, res);
     return { message: 'access token refreshed' };
   }
 }
