@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { Response } from 'express';
 import { parseSimpleRestQuery } from 'src/utils/parseSimpleRestQuery';
@@ -14,7 +14,12 @@ export class AdminService {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existing) throw new Error('Email 已被註冊');
+    if (existing) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_EXISTS',
+        message: 'Email 已被註冊',
+      });
+    }
 
     const hashed = await bcrypt.hash(dto.password, 10);
     await this.prisma.user.create({
@@ -24,7 +29,10 @@ export class AdminService {
         password: hashed,
       },
     });
-    return { message: '註冊成功' };
+    return {
+      code: 'REGISTRATION_SUCCESS',
+      message: '註冊成功',
+    };
   }
 
   async findAll(query: Record<string, string>, res: Response) {

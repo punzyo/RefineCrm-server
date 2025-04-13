@@ -21,8 +21,8 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Post('register')
-  register(@Body() dto: RegisterAdminDto) {
+  @Post()
+  create(@Body() dto: RegisterAdminDto) {
     return this.adminService.register(dto);
   }
 
