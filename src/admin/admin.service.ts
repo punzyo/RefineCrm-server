@@ -46,8 +46,8 @@ export class AdminService {
         take,
         select: {
           id: true,
-          email: true,
           name: true,
+          email: true,
           createdAt: true,
           updatedAt: true,
         },
