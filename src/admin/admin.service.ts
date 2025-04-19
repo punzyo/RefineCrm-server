@@ -83,6 +83,12 @@ export class AdminService {
     return result;
   }
 
+  async getRoles(): Promise<{ id: string; name: string }[]> {
+    return await this.prisma.role.findMany({
+      select: { id: true, name: true },
+    });
+  }
+
   async updateUserRoles(dto: UpdateUserRoleDto) {
     const { userId, roleIds } = dto;
 

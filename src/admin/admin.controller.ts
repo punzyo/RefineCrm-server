@@ -45,6 +45,12 @@ export class AdminController {
     return this.adminService.findAll(query, res);
   }
 
+  @Get('roles')
+  @UseGuards(AuthGuard('jwt'))
+  getRoles() {
+    return this.adminService.getRoles();
+  }
+
   @Patch('roles')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @SetMetadata('permissions', [Permission.AdminWrite])
