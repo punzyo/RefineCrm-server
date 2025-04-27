@@ -17,6 +17,8 @@ import { PermissionsGuard } from 'src/permission/permissions.guard';
 import { AdminService } from './admin.service';
 import { RegisterAdminDto } from './dto/register-admin.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { Param } from '@nestjs/common';
+
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -56,5 +58,12 @@ export class AdminController {
   @SetMetadata('permissions', [Permission.AdminWrite])
   updateRoles(@Body() dto: UpdateUserRoleDto) {
     return this.adminService.updateUserRoles(dto);
+  }
+
+  @Get(':id')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @SetMetadata('permissions', [Permission.AdminRead])
+  getOne(@Param('id') id: string) {
+    return this.adminService.findOne(id);
   }
 }

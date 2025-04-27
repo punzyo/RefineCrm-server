@@ -94,6 +94,34 @@ export class AdminService {
     });
   }
 
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        roles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      ...user,
+      roleIds: user?.roles.map((r) => r.role.id),
+      roles: user?.roles.map((r) => r.role.name),
+    };
+  }
   async updateUserRoles(dto: UpdateUserRoleDto) {
     const { userId, roleIds } = dto;
 
