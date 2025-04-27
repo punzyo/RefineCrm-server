@@ -5,6 +5,7 @@ import { parseSimpleRestQuery } from 'src/utils/parseSimpleRestQuery';
 import { PrismaService } from '../prisma.service';
 import { RegisterAdminDto } from './dto/register-admin.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateAdminDto } from './dto/update-admin.dto';
 
 @Injectable()
 export class AdminService {
@@ -133,5 +134,27 @@ export class AdminService {
     await this.prisma.userRole.createMany({ data });
 
     return { message: '權限已更新' };
+  }
+
+  async updateAdmin(dto: UpdateAdminDto) {
+    const { userId, name, email, roleIds } = dto;
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name,
+          email,
+        },
+      }),
+      this.prisma.userRole.deleteMany({
+        where: { userId },
+      }),
+      this.prisma.userRole.createMany({
+        data: roleIds.map((roleId) => ({ userId, roleId })),
+      }),
+    ]);
+
+    return { message: '更新成功' };
   }
 }
