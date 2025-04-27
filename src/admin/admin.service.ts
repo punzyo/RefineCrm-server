@@ -27,6 +27,11 @@ export class AdminService {
         name: dto.name,
         email: dto.email,
         password: hashed,
+        roles: {
+          create: dto.roleIds.map((roleId) => ({
+            roleId,
+          })),
+        },
       },
     });
     return {
